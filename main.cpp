@@ -1,4 +1,5 @@
 #include"Connection.h"
+#include"MyConnectionPool.h"
 #include<iostream>
 
 int main()
@@ -12,6 +13,7 @@ int main()
     char sql[1024]={0};
     sprintf(sql,"INSERT INTO user (name,age,sex) VALUES ('%s', %d, '%s')", "zhangsan", 20, "男");
     conn.update(sql); */
-
+    // 测试连接池
+    MyConnectionPool* pool = MyConnectionPool::getConnectionPool();
     return 0;
 }

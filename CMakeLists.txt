@@ -11,6 +11,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(SOURCES
     main.cpp
     Connection.cpp
+    MyConnectionPool.cpp
 )
 
 # 手动指定 MySQL 的头文件和库路径
