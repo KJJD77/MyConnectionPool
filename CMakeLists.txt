@@ -22,4 +22,4 @@ link_directories(/usr/lib/x86_64-linux-gnu) # MySQL 库路径
 add_executable(MyConnectionPool ${SOURCES})
 
 # 链接 MySQL 客户端库
-target_link_libraries(MyConnectionPool mysqlclient)
+target_link_libraries(MyConnectionPool mysqlclient pthread)

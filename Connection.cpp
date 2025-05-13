@@ -18,7 +18,7 @@ Connection::~Connection()
 }
 
 bool Connection::connect(std::string ip, unsigned short port, std::string user, std::string password,
-             std::string dbname)
+                         std::string dbname)
 {
     MYSQL *p = mysql_real_connect(_conn, ip.c_str(), user.c_str(),
                                   password.c_str(), dbname.c_str(), port, nullptr, 0);
@@ -35,7 +35,7 @@ bool Connection::update(std::string sql)
     return true;
 }
 // 查询操作 select
-MYSQL_RES* Connection::query(std::string sql)
+MYSQL_RES *Connection::query(std::string sql)
 {
     if (mysql_query(_conn, sql.c_str()))
     {
