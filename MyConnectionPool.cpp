@@ -88,6 +88,7 @@ MyConnectionPool::MyConnectionPool()
     std::thread produce(std::bind(&MyConnectionPool::produceConnectionTask, this));
     produce.detach();
 
+    // 开启扫描者线程
     std::thread scanner(std::bind(&MyConnectionPool::scannerConnectionTask, this));
     scanner.detach();
 }
