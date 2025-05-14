@@ -79,38 +79,48 @@ MyConnectionPool::MyConnectionPool()
     {
         Connection *p = new Connection();
         p->connect(_ip, _port, _username, _password, _dbname);
+        p->refreshAliveTime();
         _connectionQue.push(p);
         _connectionCnt++;
     }
 
-    //开启生产者线程
+    // 开启生产者线程
     std::thread produce(std::bind(&MyConnectionPool::produceConnectionTask, this));
+    produce.detach();
 
+    std::thread scanner(std::bind(&MyConnectionPool::scannerConnectionTask, this));
+    scanner.detach();
 }
-
 void MyConnectionPool::produceConnectionTask()
 {
-    std::unique_lock<std::mutex> lock(_queueMutex);
-    while (!_connectionQue.empty())
+    for (;;)
     {
-        cv.wait(lock);
+        std::unique_lock<std::mutex> lock(_queueMutex);
+        while (!_connectionQue.empty())
+        {
+            cv.wait(lock);
+        }
+        if (_connectionCnt < _maxSize)
+        {
+            Connection *p = new Connection();
+            p->connect(_ip, _port, _username, _password, _dbname);
+            _connectionQue.push(p);
+            p->refreshAliveTime();
+            _connectionCnt++;
+        }
+
+        // 通知消费者线程，可以消费连接了
+        cv.notify_all();
     }
-    if (_connectionCnt < _maxSize)
-    {
-        Connection *p = new Connection();
-        p->connect(_ip, _port, _username, _password, _dbname);
-        _connectionQue.push(p);
-        _connectionCnt++;
-    }
-    // 通知消费者线程，可以消费连接了
-    cv.notify_all();
 }
+
 // 给外部提供接口，从连接池中获取一个可用的空闲连接
 std::shared_ptr<Connection> MyConnectionPool::getConnection()
 {
     std::unique_lock<std::mutex> lock(_queueMutex);
     while (_connectionQue.empty())
     {
+        // sleep
         if (cv.wait_for(lock, std::chrono::milliseconds(_connectionTimeout)) == std::cv_status::timeout)
         {
             if (_connectionQue.empty())
@@ -130,9 +140,37 @@ shared_ptr智能指针析构时，会把connection资源直接delete掉，相当
                                    {
                                        std::unique_lock<std::mutex> lock(_queueMutex);
                                        _connectionQue.push(cont);
-                                       _connectionCnt++;
-                                   });
+                                       cont->refreshAliveTime(); });
+
     _connectionQue.pop();
     cv.notify_all(); // 消费完连接以后，通知生产者线程检查一下，如果队列为空了，赶紧生产连接
+
     return sp;
+}
+
+// 扫描超过maxIdleTime时间的空闲连接，进行对于的连接回收
+void MyConnectionPool::scannerConnectionTask()
+{
+    for (;;)
+    {
+        // 通过sleep模拟定时效果
+        std::this_thread::sleep_for(std::chrono::seconds(_maxIdleTime));
+
+        // 扫描整个队列，释放多余的连接
+        std::unique_lock<std::mutex> lock(_queueMutex);
+        while (_connectionCnt > _initSize)
+        {
+            Connection *cont = _connectionQue.front();
+            if (cont->getAliveTime() >= (_maxIdleTime * 1000))
+            {
+                _connectionQue.pop();
+                _connectionCnt--;
+                delete (cont);
+            }
+            else
+            {
+                break;
+            }
+        }
+    }
 }

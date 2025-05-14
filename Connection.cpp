@@ -1,4 +1,5 @@
 #include "Connection.h"
+#include "public.h"
 #include <iostream>
 
 Connection::Connection()
@@ -43,4 +44,13 @@ MYSQL_RES *Connection::query(std::string sql)
         return nullptr;
     }
     return mysql_use_result(_conn);
+}
+
+void Connection::refreshAliveTime(){
+    _alivetime=clock();
+}
+
+clock_t Connection::getAliveTime() const
+{
+    return clock()-_alivetime;
 }
